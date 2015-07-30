@@ -504,13 +504,14 @@ def exec_cmds(working_dir, cmds, message_queue, is_verbose=False):
 def exec_cmd(working_dir, cmd):
     os.environ['CYGWIN'] = 'nodosfilewarning'
     if cmd:
-        os.chdir("/")
-        cmd = formatCommand(cmd)
+        os.chdir("/")        
         if "avr-" in cmd:
-            avr = working_dir + '\\hardware\\tools\\avr\\'
-            cmd = avr + 'bin\\' + cmd
+            cmd = cmd.replace('"','',1)
+            avr = '"%s\\hardware\\tools\\avr' % working_dir
+            cmd = avr + '\\bin\\' + cmd           
             cmd = cmd.replace("{runtime.tools.avrdude.path}", avr)
 
+        cmd = formatCommand(cmd)
         compile_proc = subprocess.Popen(cmd, stdout=subprocess.PIPE,
                                         stderr=subprocess.PIPE, shell=True)
         result = compile_proc.communicate()
@@ -526,9 +527,10 @@ def exec_cmd(working_dir, cmd):
 def formatCommand(cmd):
     if '::' in cmd:
         cmd = cmd.replace('::', ' ')
-    cmd = cmd.replace('\\', '/')
+    cmd = cmd.replace('\\', '/') 
     os_name = base.sys_info.get_os_name()
     python_version = base.sys_info.get_python_version()
+
     if python_version < 3 and os_name == 'windows':
         cmd = '"%s"' % cmd
     return cmd
@@ -549,7 +551,6 @@ def gen_core_objs(core_path, folder_prefix, build_path, is_new_build):
     core_dir = base.abs_file.Dir(core_path)
     core_cpp_files = core_dir.recursive_list_files(
         arduino_src.CPP_EXTS, ['libraries'])
-    # core_cpp_files = core_dir.list_files_of_extensions(arduino_src.CPP_EXTS)
     sub_dir_name = folder_prefix + core_dir.get_name()
     core_obj_paths = gen_obj_paths(core_path, build_path,
                                    sub_dir_name, core_cpp_files)
