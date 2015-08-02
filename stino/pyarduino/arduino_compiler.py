@@ -508,16 +508,10 @@ def exec_cmd(working_dir, cmd):
         if "avr-" in cmd:
             cmd = cmd.replace('"','',1)
             avr = '"%s\\hardware\\tools\\avr' % working_dir
-<<<<<<< HEAD
             cmd = avr + '\\bin\\' + cmd           
             cmd = cmd.replace("{runtime.tools.avrdude.path}", avr)
 
         cmd = formatCommand(cmd)
-=======
-            cmd = avr + '\\bin\\' + cmd
-            cmd = cmd.replace("{runtime.tools.avrdude.path}", avr)
-            print(cmd)
->>>>>>> e4aa2d15790f07af5a93a5b74a53a7e307f997e3
         compile_proc = subprocess.Popen(cmd, stdout=subprocess.PIPE,
                                         stderr=subprocess.PIPE, shell=True)
         result = compile_proc.communicate()
