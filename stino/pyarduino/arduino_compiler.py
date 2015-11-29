@@ -312,7 +312,8 @@ class Compiler(object):
             core_changed = True
             cmds = []
             for obj_path in self.core_obj_paths:
-                cmd = ar_cmd.replace('{object_file}', obj_path)
+                cmd = ar_cmd.replace('{object_file}', obj_path) \
+                            .replace('{archive_file_path}', core_archive_path)
                 cmds.append(cmd)
             self.build_files.append(core_archive_path)
             self.file_cmds_dict[core_archive_path] = cmds
