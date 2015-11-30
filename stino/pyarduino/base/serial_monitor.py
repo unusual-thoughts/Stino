@@ -69,7 +69,7 @@ class SerialMonitor(object):
                 self.queue.put(in_text)
 
                 length_before += length_in_text
-                length_before %= 20
+                length_before %= 16
             time.sleep(0.01)
         self.serial.close()
 
