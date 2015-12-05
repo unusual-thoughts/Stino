@@ -14,48 +14,128 @@ from __future__ import print_function
 from __future__ import division
 from __future__ import unicode_literals
 
+import sublime
+import sublime_plugin
 import threading
+import subprocess
 import time
+import os.path
 
 from . import base
+from . import arduino_project
 from . import arduino_compiler
 from . import arduino_target_params
 
 
 class Uploader(object):
-    def __init__(self, path, console=None):
+    def __init__(self, sketch_path, console=None):
         self.message_queue = base.message_queue.MessageQueue(console)
-        self.compiler = arduino_compiler.Compiler(path, console)
+        self.compiler = arduino_compiler.Compiler(sketch_path, console)
+        self.project = arduino_project.Project(sketch_path)
+        self.sketch_folder = os.path.dirname(sketch_path)
         self.error_occured = False
         self.params = {}
         self.do_touch = False
         self.wait_for_upload_port = False
-
+    
     def upload(self, using_programmer=False):
+
         self.compiler.build()
         self.message_queue.start_print()
-        upload_thread = threading.Thread(
-            target=lambda: self.start_upload(using_programmer))
+        upload_thread = threading.Thread(target=lambda: self.start_upload(using_programmer))
         upload_thread.start()
 
+    """
+    def upload(self, using_programmer=False):
+
+        #prefix_env = "[env:uno]\n" # name of the enviroment
+        #PathIO = self.sketch_folder + "/platformio.ini"
+        
+        #FileIO = open(PathIO,'wb')
+        #FileIO.write(bytes(prefix_env, 'UTF-8'))
+        #FileIO.close()
+
+        print("estoy aqui")
+        project_name = self.project.get_name()
+        self.message_queue.put('[Stino - Start building "{0}"...]\\n', project_name)
+
+        os.environ['CYGWIN'] = 'nodosfilewarning'
+        error_occured = False
+
+        cmd = "platformio init -d C:/Users/guill/Desktop/blink_example"
+
+        #cmd = "platformio run -d C:/Users/guill/Desktop/blink_example --target upload"
+        compile_proc = subprocess.Popen(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE, shell=True)
+        result = compile_proc.communicate()
+        return_code = compile_proc.returncode
+        
+        stdout = result[0].decode(base.sys_info.get_sys_encoding())
+        stderr = result[1].decode(base.sys_info.get_sys_encoding())
+
+        if(stdout):
+            self.message_queue.put(stdout + '\n')
+        if(stderr):
+            self.message_queue.put(stderr + '\n')
+
+        if return_code != 0:
+            self.message_queue.put('[Stino - Exit with error code {0}.]\\n', return_code)
+            self.error_occured = True
+
+       
+        #self.compiler.build()
+        #self.message_queue.start_print()
+        #upload_thread = threading.Thread(
+        #    target=lambda: self.start_upload(using_programmer))
+        #upload_thread.start()
+        """
+        
+
     def start_upload(self, using_programmer):
+
         while not self.compiler.is_finished():
             time.sleep(1)
         if not self.compiler.has_error():
-            self.message_queue.put('[Stino - Start uploading...]\\n')
-            self.params = self.compiler.get_params()
+            self.message_queue.put('[StinoIO - Start uploading...]\\n')
+
+            #self.params = self.compiler.get_params()
             self.prepare_upload_port(using_programmer)
-            self.prepare_cmds(using_programmer)
-            self.exec_cmds()
+            #self.prepare_cmds(using_programmer)
+            #self.exec_cmds()
+            self.error_occured = False
+            cmd = 'platformio -f -c sublimetext run -t upload --upload-port %s' % (self.upload_port)
+
+            compile_proc = subprocess.Popen(cmd, stdout=subprocess.PIPE, cwd=self.sketch_folder, stderr=subprocess.PIPE, shell=True)
+            result = compile_proc.communicate()
+            return_code = compile_proc.returncode
+            
+            stdout = result[0].decode(base.sys_info.get_sys_encoding())
+            stderr = result[1].decode(base.sys_info.get_sys_encoding())
+
+            """
+            if(stdout):
+                self.message_queue.put('stdout\n')
+                self.message_queue.put(stdout + '\n')
+            if(stderr):
+                self.message_queue.put('stderr\n')
+                self.message_queue.put(stderr + '\n')
+            """
+
+            if return_code != 0:
+                self.message_queue.put('[StinoIO - Exit with error code {0}.]\\n', return_code)
+                self.error_occured = True
+
             if not self.error_occured:
                 self.retouch_serial_port()
-                self.message_queue.put('[Stino - Done uploading.]\\n')
+                self.message_queue.put('[StinoIO - Done uploading.]\\n')
         time.sleep(20)
         self.message_queue.stop_print()
+    
 
     def prepare_upload_port(self, using_programmer):
         settings = base.settings.get_arduino_settings()
         self.upload_port = settings.get('serial_port', 'no_serial')
+        return
+        """
         self.params['serial.port'] = self.upload_port
         if self.upload_port.startswith('/dev/'):
             self.upload_port_file = self.upload_port[5:]
@@ -64,8 +144,7 @@ class Uploader(object):
         self.params['serial.port.file'] = self.upload_port_file
 
         if self.upload_port in base.serial_monitor.serials_in_use:
-            serial_monitor = base.serial_monitor.serial_monitor_dict.get(
-                self.upload_port, None)
+            serial_monitor = base.serial_monitor.serial_monitor_dict.get(self.upload_port, None)
             if serial_monitor:
                 serial_monitor.stop()
 
@@ -107,6 +186,7 @@ class Uploader(object):
                 self.message_queue.put(text)
                 base.serial_port.auto_reset(self.upload_port)
         self.params = arduino_target_params.replace_param_values(self.params)
+        """
 
     def prepare_cmds(self, using_programmer):
         self.cmds = []

@@ -15,10 +15,12 @@ from __future__ import division
 from __future__ import unicode_literals
 
 import os
+import inspect
 import threading
 import subprocess
 import re
 import time
+import shutil
 
 from . import base
 from . import arduino_info
@@ -29,19 +31,20 @@ from . import arduino_src
 
 class Compiler(object):
     def __init__(self, path, console=None):
+        os.environ['CYGWIN'] = 'nodosfilewarning'
+
         self.need_to_build = True
         self.message_queue = base.message_queue.MessageQueue(console)
 
-        target_params_info = arduino_target_params.TargetParamsInfo()
-        self.params = target_params_info.get_params()
+        #target_params_info = arduino_target_params.TargetParamsInfo()
+        #self.params = target_params_info.get_params()
         self.arduino_info = arduino_info.get_arduino_info()
-
         self.project = arduino_project.Project(path)
-        project_name = self.project.get_name()
+        
 
-        build_path = get_build_path()
-        build_path = os.path.join(build_path, project_name)
-        self.set_build_path(build_path)
+        self.project_name = self.project.get_name()
+
+        self.build_path = os.path.dirname(get_build_path(self))
 
         self.done_build = False
         self.error_occured = False
@@ -50,49 +53,109 @@ class Compiler(object):
         self.bare_gcc = self.settings.get('bare_gcc', False)
         self.is_big_project = self.settings.get('big_project', False)
 
-    def set_build_path(self, build_path):
-        self.build_path = build_path
-        if not os.path.isdir(self.build_path):
-            os.makedirs(self.build_path)
 
     def build(self):
         self.message_queue.start_print()
         build_thread = threading.Thread(target=self.start_build)
         build_thread.start()
 
+    def initialize_io(self):        
+        error_occured   = False
+
+        self.message_queue.put('[StinoIO - Initializing project: "{0}"...]\\n', self.project_name)
+
+        cmd = 'platformio -f -c sublimetext init -b uno'
+
+        compile_proc = subprocess.Popen(cmd, stdout=subprocess.PIPE, cwd=self.build_path, stderr=subprocess.PIPE, shell=True)
+        result = compile_proc.communicate()
+        return_code = compile_proc.returncode
+        
+        stdout = result[0].decode(base.sys_info.get_sys_encoding())
+        stderr = result[1].decode(base.sys_info.get_sys_encoding())
+
+        """
+        if(stdout):
+            self.message_queue.put('stdout\n')
+            self.message_queue.put(stdout + '\n')
+        if(stderr):
+            self.message_queue.put('stderr\n')
+            self.message_queue.put(stderr + '\n')
+        """
+
+        if return_code != 0:
+            self.message_queue.put('[StinoIO - Exit with error code {0}.]\\n', return_code)
+            self.error_occured = True     
+        
+        # Copy file to the src folder
+        if(not self.error_occured):
+            try:
+                shutil.copy(self.project.get_path(), self.build_path + '\\src')
+            except:
+                self.error_occured = True
+
+
     def start_build(self):
-        target_board = \
-            self.arduino_info.get_target_board_info().get_target_board()
-        if not target_board:
-            text = 'No board exists. Please Select Arduino Application Folder '
-            text += 'or Change Arduino Sketchbook Folder in Arduino Menu -> '
-            text += 'Preferences.\\n'
-            self.message_queue.put(text)
-            return
-        start_time = time.time()
-        self.check_new_build()
-        self.prepare_project_src_files()
-        if self.need_to_build:
-            project_name = self.project.get_name()
-            self.message_queue.put(
-                '[Stino - Start building "{0}"...]\\n', project_name)
-            self.prepare_core_src_files()
-            self.prepare_params()
-            self.prepare_cmds()
-            self.exec_build_cmds()
-            if not self.error_occured:
-                self.show_size_info()
+        self.initialize_io()
+
+        if(not self.error_occured):
+            self.message_queue.put('[StinoIO - Initializing finished correctly]\\n')
+
+            start_time = time.time()
+            #self.check_new_build()
+            #self.prepare_project_src_files()       
+
+            #if self.need_to_build:
+            self.message_queue.put('[StinoIO - Start building project]\\n')
+
+            cmd = 'platformio -f -c sublimetext run'
+
+            compile_proc = subprocess.Popen(cmd, stdout=subprocess.PIPE, cwd=self.build_path, stderr=subprocess.PIPE, shell=True)
+            result = compile_proc.communicate()
+            return_code = compile_proc.returncode
+            
+            stdout = result[0].decode(base.sys_info.get_sys_encoding())
+            stderr = result[1].decode(base.sys_info.get_sys_encoding())
+
+            """
+            if(stdout):
+                self.message_queue.put(stdout + '\n')
+            if(stderr):
+                self.message_queue.put(stderr + '\n')
+            """
+
+            if return_code != 0:
+                self.message_queue.put('[StinoIO - Exit with error code {0}.]\\n', return_code)
+                self.error_occured = True
+
+            if(not self.error_occured):
                 end_time = time.time()
                 diff_time = end_time - start_time
                 diff_time = '%.1f' % diff_time
-                self.message_queue.put(
-                    '[Stino - Done building "{0}" in {1}s.]\\n',
-                    project_name, diff_time)
-        else:
-            self.error_occured = True
-        self.done_build = True
-        time.sleep(20)
-        self.message_queue.stop_print()
+                self.message_queue.put('[StinoIO - Done building "{0}" in {1}s.]\\n',self.project_name, diff_time)
+                self.done_build = True
+
+                """
+                self.prepare_core_src_files()
+                self.prepare_params()
+                self.prepare_cmds()
+                self.exec_build_cmds()
+                if not self.error_occured:
+                    self.show_size_info()
+                    end_time = time.time()
+                    diff_time = end_time - start_time
+                    diff_time = '%.1f' % diff_time
+                    self.message_queue.put(
+                        '[Stino - Done building "{0}" in {1}s.]\\n',
+                        project_name, diff_time)
+            else:
+                self.error_occured = True
+            self.done_build = True
+            """
+            time.sleep(20)
+            self.message_queue.stop_print()
+
+    #def start_upload(self):
+
 
     def check_new_build(self):
         self.is_new_build = False
@@ -132,6 +195,7 @@ class Compiler(object):
             self.is_new_build = True
 
     def prepare_project_src_files(self):
+        """
         self.project_src_changed = False
         self.project_cpp_obj_pairs = []
         self.project_obj_paths = []
@@ -171,6 +235,7 @@ class Compiler(object):
         if self.project_cpp_obj_pairs:
             self.project_src_changed = True
         self.need_to_build = bool(self.project_obj_paths)
+        """
 
     def prepare_lib_src_files(self):
         ino_files = []
@@ -190,6 +255,7 @@ class Compiler(object):
         last_build_file.set('lib_paths', lib_paths)
 
     def prepare_core_src_files(self):
+        """
         self.core_obj_paths = []
         self.core_cpp_obj_pairs = []
         self.core_src_changed = False
@@ -235,6 +301,7 @@ class Compiler(object):
 
         if self.core_cpp_obj_pairs:
             self.core_src_changed = True
+        """
 
     def prepare_params(self):
         self.archive_file_name = 'core.a'
@@ -312,8 +379,7 @@ class Compiler(object):
             core_changed = True
             cmds = []
             for obj_path in self.core_obj_paths:
-                cmd = ar_cmd.replace('{object_file}', obj_path) \
-                            .replace('{archive_file_path}', core_archive_path)
+                cmd = ar_cmd.replace('{object_file}', obj_path)
                 cmds.append(cmd)
             self.build_files.append(core_archive_path)
             self.file_cmds_dict[core_archive_path] = cmds
@@ -350,24 +416,11 @@ class Compiler(object):
                 self.build_files.append(hex_file_path)
                 self.file_cmds_dict[hex_file_path] = [hex_cmd]
 
-    def exec_build_cmds(self):
-        show_compilation_output = self.settings.get('build_verbose', False)
 
-        self.working_dir = self.arduino_info.get_ide_dir().get_path()
-        error_occured = False
-
-        total_file_number = len(self.build_files)
-        for index, build_file in enumerate(self.build_files):
-            percent = str(int(100 * (index + 1) / total_file_number )).rjust(3)
-            self.message_queue.put('[{1}%] Creating {0}...\\n',
-                                   build_file, percent)
-            cmds = self.file_cmds_dict.get(build_file)
-            error_occured = exec_cmds(self.working_dir, cmds,
-                                      self.message_queue,
-                                      show_compilation_output)
-            if error_occured:
-                self.error_occured = True
-                break
+    def exec_build_cmds(self):        
+        os.environ['CYGWIN'] = 'nodosfilewarning'
+        error_occured = False    
+            
 
     def show_size_info(self):
         size_cmd = self.params.get('recipe.size.pattern', '')
@@ -434,16 +487,15 @@ class Compiler(object):
         return self.arduino_info.get_ide_dir().get_path()
 
 
-def get_build_path():
+def get_build_path(self):    
+    project_path = self.project.get_path()
     settings = base.settings.get_arduino_settings()
-    build_path = settings.get('build_path', '')
-    if not build_path:
-        tmp_path = base.sys_path.get_tmp_path()
-        build_path = os.path.join(tmp_path, 'Stino_build')
-    if not os.path.isdir(build_path):
-        os.makedirs(build_path)
-    return build_path
-
+    setting_build_path = settings.get('build_path', '')
+    
+    if(setting_build_path != '' and setting_build_path != project_path):
+        return setting_build_path
+    else:
+        return project_path
 
 def check_ino_change(ino_files, combined_file):
     ino_changed = False
@@ -483,47 +535,6 @@ def gen_obj_paths(src_path, build_path, sub_dir, cpp_files):
         if not os.path.isdir(obj_dir_name):
             os.makedirs(obj_dir_name)
     return obj_paths
-
-
-def exec_cmds(working_dir, cmds, message_queue, is_verbose=False):
-    error_occured = False
-    for cmd in cmds:
-        return_code, stdout, stderr = exec_cmd(working_dir, cmd)
-        if is_verbose:
-            message_queue.put(cmd + '\n')
-            if stdout:
-                message_queue.put(stdout + '\n')
-        if stderr:
-            message_queue.put(stderr + '\n')
-        if return_code != 0:
-            message_queue.put(
-                '[Stino - Exit with error code {0}.]\\n', return_code)
-            error_occured = True
-            break
-    return error_occured
-
-def exec_cmd(working_dir, cmd):
-    os.environ['CYGWIN'] = 'nodosfilewarning'
-    if cmd:
-        os.chdir("/")        
-        if "avr-" in cmd:
-            cmd = cmd.replace('"','',1)
-            avr = '"%s\\hardware\\tools\\avr' % working_dir
-            cmd = avr + '\\bin\\' + cmd           
-            cmd = cmd.replace("{runtime.tools.avrdude.path}", avr)
-
-        cmd = formatCommand(cmd)
-        compile_proc = subprocess.Popen(cmd, stdout=subprocess.PIPE,
-                                        stderr=subprocess.PIPE, shell=True)
-        result = compile_proc.communicate()
-        return_code = compile_proc.returncode
-        stdout = result[0].decode(base.sys_info.get_sys_encoding())
-        stderr = result[1].decode(base.sys_info.get_sys_encoding())
-    else:    
-        return_code = 0
-        stdout = ''
-        stderr = ''
-    return (return_code, stdout, stderr)
 
 def formatCommand(cmd):
     if '::' in cmd:

@@ -145,13 +145,6 @@
                 [
                 ]
             },
-            {
-                "caption": "Board Options",
-                "id": "board_options",
-                "children":
-                [
-                ]
-            },
             {"caption": "-"},
             {
                 "caption": "Programmer",

@@ -6,7 +6,7 @@
 #
 
 """
-Document
+Documents
 """
 
 from __future__ import absolute_import
@@ -20,6 +20,7 @@ import sublime
 import sublime_plugin
 
 st_version = int(sublime.version())
+
 if st_version < 3000:
     import stino
 else:
@@ -35,10 +36,10 @@ class SketchListener(sublime_plugin.EventListener):
         pattern_text = r'^(\S*?):([0-9]+?):'
         self.pattern = re.compile(pattern_text, re.M | re.S)
 
-    def on_activated(self, view):
+    def on_activated(self, view):       
         stino.main.set_status(view)
 
-    def on_close(self, view):
+    def on_close(self, view):        
         monitor_module = stino.pyarduino.base.serial_monitor
         if stino.st_console.is_monitor_view(view):
             name = view.name()
@@ -265,17 +266,6 @@ class SelectBoardCommand(sublime_plugin.WindowCommand):
     def is_checked(self, board_id):
         target_board_id = stino.settings.get('target_board_id', '')
         return board_id == target_board_id
-
-
-class SelectSubBoardCommand(sublime_plugin.WindowCommand):
-    def run(self, option_index, sub_board_id):
-        stino.main.change_sub_board(self.window, option_index, sub_board_id)
-
-    def is_checked(self, option_index, sub_board_id):
-        target_board_id = stino.settings.get('target_board_id', '')
-        target_sub_board_ids = stino.settings.get(target_board_id, [])
-        return sub_board_id in target_sub_board_ids
-
 
 class SelectProgrammerCommand(sublime_plugin.WindowCommand):
     def run(self, programmer_id):

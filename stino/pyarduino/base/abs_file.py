@@ -21,8 +21,8 @@ import codecs
 
 class AbstractFile(object):
     def __init__(self, path):
-        path = os.path.abspath(path)
-        self.set_path(path)
+        path = os.path.abspath(path)        
+        self.set_path(path)  
 
     def set_path(self, path):
         self.path = path

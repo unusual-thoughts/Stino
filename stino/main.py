@@ -104,7 +104,6 @@ def create_sub_menus():
     st_menu.create_examples_menu(arduino_info)
     st_menu.create_libraries_menu(arduino_info)
     st_menu.create_boards_menu(arduino_info)
-    st_menu.create_board_options_menu(arduino_info)
     st_menu.create_programmers_menu(arduino_info)
     st_menu.create_serials_menu()
     st_menu.create_languages_menu()
@@ -220,12 +219,18 @@ def import_library(view, edit, library_path):
         text += '\n'
     view.insert(edit, 0, text)
 
+# Check if the file to upload is saved
+# if it don't save it in a temp folder
+# run the upload_sketch function
+# @ return none
 
 def handle_sketch(view, func, using_programmer=False):
     window = view.window()
     views = window.views()
+
     if view not in views:
         view = window.active_view()
+        
     if view.file_name() is None:
         tmp_path = pyarduino.base.sys_path.get_tmp_path()
         tmp_path = os.path.join(tmp_path, 'Arduino')
@@ -254,9 +259,10 @@ def handle_sketch(view, func, using_programmer=False):
 
     if view.is_dirty():
         view.run_command('save')
-    file_path = view.file_name()
+    file_path = view.file_name()    
     sketch_path = os.path.dirname(file_path)
-    func(view, sketch_path, using_programmer)
+
+    func(view, file_path, using_programmer)
 
 
 def build_sketch(view, sketch_path, using_programmer=False):
@@ -557,19 +563,10 @@ def set_status(view):
 
         target_board_info = arduino_info.get_target_board_info()
         target_board = target_board_info.get_target_board()
+  
         if target_board:
-            target_board_caption = target_board.get_caption()
+            target_board_caption = target_board['board_name']
             infos.append(target_board_caption)
-
-            if target_board.has_options():
-                target_sub_boards = target_board_info.get_target_sub_boards()
-                for index, target_sub_board in enumerate(target_sub_boards):
-                    caption_text = target_sub_board.get_caption()
-                    if index == 0:
-                        caption_text = '[' + caption_text
-                    if index == len(target_sub_boards) - 1:
-                        caption_text += ']'
-                    infos.append(caption_text)
         else:
             target_board_caption = 'No board'
             infos.append(target_board_caption)

@@ -15,7 +15,7 @@ from __future__ import division
 from __future__ import unicode_literals
 
 from . import base
-
+from . import arduino_json
 
 class TargetBoardInfo(object):
     def __init__(self, root_dirs):
@@ -29,18 +29,17 @@ class TargetBoardInfo(object):
         self.check_target_board()
 
     def check_target_board(self):
-        boards = load_boards(self.root_dirs)
+        boards = arduino_json.get_json_boards()
+
         if boards:
-            board_ids = [board.get_id() for board in boards]
+            board_ids = [board['board_id'] for board in boards]
             target_board_id = self.settings.get('target_board_id', '')
+
             if not target_board_id in board_ids:
                 target_board_id = board_ids[0]
                 self.settings.set('target_board_id', target_board_id)
             index = board_ids.index(target_board_id)
             self.target_board = boards[index]
-            self.target_sub_boards = []
-            if self.target_board.has_options():
-                self.check_target_sub_boards()
 
     def check_target_sub_boards(self):
         self.target_sub_boards = []
@@ -75,10 +74,7 @@ class TargetBoardInfo(object):
         return self.target_sub_boards
 
     def get_target_arch(self):
-        target_board_id = self.target_board.get_id()
-        ids = target_board_id.split('.')
-        target_arch = ids[-2]
-        return target_arch
+        return self.target_board
 
     def get_params(self):
         params = {}
@@ -120,8 +116,8 @@ class TargetSubBoardInfo(object):
     def get_params(self):
         return self.target_sub_board.get_params()
 
-
 def load_boards(root_dirs):
+
     boards = []
     for root_dir in root_dirs:
         for package in root_dir.get_packages():
