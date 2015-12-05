@@ -24,7 +24,7 @@ this_file_path = os.path.abspath(inspect.getfile(inspect.currentframe()))
 
 
 def get_plugin_path():
-    this_folder_path = os.path.dirname(this_file_path)
+    this_folder_path = os.path.dirname(this_file_path)    
     plugin_path = os.path.dirname(this_folder_path)
     return plugin_path
 
@@ -44,9 +44,12 @@ def get_stino_user_path():
 
 def get_preset_path():
     plugin_path = get_plugin_path()
-    preset_path = os.path.join(plugin_path, 'preset')
+    preset_path = os.path.join(plugin_path, 'preset')    
     return preset_path
 
+def get_boards_file_path():
+    file_path = get_preset_path() + '\\boards.json'
+    return file_path
 
 def get_user_preset_path():
     stino_user_path = get_stino_user_path()

@@ -1,0 +1,17 @@
+[{
+	
+		"platform_name":"AVR Boards",
+		"boards":
+		[{
+			"board_name":"Arduino Uno",
+			"board_id":"uno"
+		},
+		{
+			"board_name":"Arduino Mega",
+			"board_id":"mega"
+		},{
+			"board_name":"Arduino Yun",
+			"board_id":"yun"
+		}]
+	
+}]

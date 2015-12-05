@@ -34,11 +34,10 @@ class Bootloader(object):
         build_thread = threading.Thread(target=self.start_burn)
         build_thread.start()
 
-    def start_burn(self):
+    def start_burn(self):    
         self.message_queue.put('[Stino - Start burning bootloader...]\\n')
         self.prepare_serial_port()
         self.prepare_cmds()
-        print(self.cmds)
         self.exec_burn_cmds()
         if not self.error_occured:
             self.message_queue.put('[Stino - Done burning bootloader.]\\n')

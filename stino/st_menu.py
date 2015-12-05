@@ -18,6 +18,7 @@ import os
 
 from . import st_base
 from . import pyarduino
+import json
 
 
 class MenuFile(pyarduino.base.json_file.JSONFile):
@@ -87,7 +88,7 @@ class Menu(object):
             self.sub_menus.append(sub_menu)
 
     def set(self, key, value):
-        self.parmas[key] = value
+        self.params[key] = value
 
     def get(self, key, default_value=None):
         return self.params.get(key, default_value)
@@ -275,37 +276,40 @@ def create_libraries_menu(arduino_info):
                     sub_menus.append(Menu())
     write_menu('libraries', sub_menus)
 
+#
+# Get the list of the boards from a json file
+# located in the "preset" folder and show it
+# in the "Board" menu
+#
 
-def create_boards_menu(arduino_info):
+def create_boards_menu(arduino_info):    
     sub_menus = []
-    for root_dir in arduino_info.get_root_dirs():
-        for package in root_dir.get_packages():
-            for platform in package.get_platforms():
+    json_file = st_base.get_boards_file_path()
+ 
+    with open(json_file) as boards_file:
+        boards_data = json.load(boards_file)
+        for platform in boards_data:
+            menu_dict = {}
+            menu_dict['caption'] = platform['platform_name']
+            menu_dict['command'] = 'none_command'
+            menu = Menu(menu_dict)
+            sub_menus.append(menu)
+            boards = platform['boards']
+            for board in boards:
                 menu_dict = {}
-                menu_dict['caption'] = platform.get_caption()
-                menu_dict['command'] = 'none_command'
+                menu_dict['caption'] = board['board_name']
+                menu_dict['command'] = 'select_board'
+                menu_dict['args'] = {'board_id': board['board_id']}
+                menu_dict['checkbox'] = True
                 menu = Menu(menu_dict)
                 sub_menus.append(menu)
-                boards = platform.get_boards()
-                for board in boards:
-                    menu_dict = {}
-                    caption = board.get_caption()
-                    board_group = board.get_params().get('group', '')
-                    if board_group:
-                        caption = '[%s] %s' % (board_group, caption)
-                    menu_dict['caption'] = caption
-                    menu_dict['command'] = 'select_board'
-                    menu_dict['args'] = {'board_id': board.get_id()}
-                    menu_dict['checkbox'] = True
-                    menu = Menu(menu_dict)
-                    sub_menus.append(menu)
-                sub_menus.append(Menu())
+            sub_menus.append(Menu())
     write_menu('boards', sub_menus)
-
 
 def create_board_options_menu(arduino_info):
     sub_menus = []
     target_board = arduino_info.get_target_board_info().get_target_board()
+    """
     if target_board:
         board_options = target_board.get_options()
         for option_index, option in enumerate(board_options):
@@ -327,7 +331,8 @@ def create_board_options_menu(arduino_info):
                     sub_menus.append(menu)
             sub_menus.append(Menu())
     write_menu('board_options', sub_menus)
-
+    """
+    
 
 def create_programmers_menu(arduino_info):
     sub_menus = []

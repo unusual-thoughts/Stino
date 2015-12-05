@@ -22,10 +22,12 @@ from . import arduino_src
 
 class Project(base.abs_file.Dir):
     def __init__(self, path):
-        super(Project, self).__init__(path)
-        primary_file_name = self.name + '.ino'
+        super(Project, self).__init__(path)  
+        primary_file_name = self.name + '.ino'            
         primary_file_path = os.path.join(self.path, primary_file_name)
+
         self.primary_file = base.abs_file.File(primary_file_path)
+        
 
     def list_ino_files(self):
         files = self.list_files_of_extensions(arduino_src.INO_EXTS)

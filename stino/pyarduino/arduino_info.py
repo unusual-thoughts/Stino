@@ -31,8 +31,7 @@ class ArduinoInfo(object):
         self.sketchbook_dir = arduino_root.SketchbookDir(sketchbook_path)
 
         root_dirs = [self.ide_dir, self.sketchbook_dir]
-        self.target_board_info = arduino_target_board.TargetBoardInfo(
-            root_dirs)
+        self.target_board_info = arduino_target_board.TargetBoardInfo(root_dirs)
         self.target_programmer_info = \
             arduino_target_programmer.TargetProgrammerInfo(root_dirs)
         self.load_libraries()
