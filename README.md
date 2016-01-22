@@ -8,4 +8,4 @@ I'm currently working in a new proyect called **Deviot**, it's a plugin for ST2 
 
 The project is still in BETA but you can try it and collaborate in any way, even just using it.
 
-https://github.com/gepd/Deviot
+More info: https://github.com/gepd/Deviot
