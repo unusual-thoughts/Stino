@@ -1,6 +1,6 @@
 #### Stino
 
-New releases or changes for stino will be updated from the main repository [main repository](https://github.com/Robot-Will/Stino)
+New releases or changes for stino will be updated from the [main repository](https://github.com/Robot-Will/Stino)
 
 ### Deviot
 
